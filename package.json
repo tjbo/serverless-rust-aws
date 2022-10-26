@@ -1,0 +1,10 @@
+{
+  "name": "serverless-rust-aws",
+  "version": "0.1.1",
+  "description": "A serverless plugin for deploying rust code to AWS Lambda through the serverless framework",
+  "main": "src/index.js",
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.9"
+  }
+}
