@@ -49,14 +49,14 @@ class ServerlessRustAwsPlugin {
 
   buildFunction(fn) {
     let { handler } = fn
-    let [projectPath, projectName] = handler.split('.')
+    let [projectPath, binName] = handler.split('.')
     let sourcePath = join(process.cwd(), projectPath)
     let buildResult = spawnSync(
       `cargo`,
-      ['build', '--release', '--target', this.targetRuntime],
+      ['build', '--release', '--bin', binName, '--target', this.targetRuntime],
       {
         cwd: sourcePath,
-        // inhert: 'stdio',
+        inhert: 'stdio',
       },
     )
 
@@ -69,7 +69,7 @@ class ServerlessRustAwsPlugin {
       'target',
       this.targetRuntime,
       'release',
-      `${projectPath}`,
+      `${binName}`,
     )
 
     const zip = new AdmZip()
@@ -83,7 +83,8 @@ class ServerlessRustAwsPlugin {
       'lambda',
       'release',
     )
-    const artifactPath = join(artifactDir, `${projectName}.zip`)
+    const artifactPath = join(artifactDir, `${binName}.zip`)
+
     fn.package = fn.package || {}
     fn.package.artifact = artifactPath
 
