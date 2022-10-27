@@ -1,13 +1,13 @@
 'use strict'
 const join = require('path').join
 const process = require('process')
+const { readFileSync, writeFile } = require('fs')
 const { spawnSync } = require('child_process')
 const AdmZip = require('adm-zip')
-const { mkdirSync, writeFileSync, readFileSync } = require('fs')
 
 class PluginError extends Error {
   constructor(message) {
-    super(message)
+    super()
     this.name = `ServerlessRustAWS Error: ${message}`
   }
 }
@@ -51,17 +51,18 @@ class ServerlessRustAwsPlugin {
     let { handler } = fn
     let [projectPath, binName] = handler.split('.')
     let sourcePath = join(process.cwd(), projectPath)
+
     let buildResult = spawnSync(
       `cargo`,
       ['build', '--release', '--bin', binName, '--target', this.targetRuntime],
       {
         cwd: sourcePath,
-        inhert: 'stdio',
+        stdio: 'inherit',
       },
     )
 
     if (buildResult.error || buildResult.status > 0) {
-      return buildResult
+      throw new PluginError(`There was an error building ${binName} with cargo`)
     }
 
     const targetPath = join(
@@ -73,34 +74,15 @@ class ServerlessRustAwsPlugin {
     )
 
     const zip = new AdmZip()
-
     zip.addFile('bootstrap', readFileSync(targetPath), '', 0o755)
 
-    const artifactDir = join(
-      process.cwd(),
-      '.serverless',
-      'target',
-      'lambda',
-      'release',
-    )
+    const artifactDir = join(process.cwd(), '.serverless')
     const artifactPath = join(artifactDir, `${binName}.zip`)
 
     fn.package = fn.package || {}
     fn.package.artifact = artifactPath
 
-    try {
-      mkdirSync(artifactDir, { recursive: true })
-    } catch {}
-    try {
-      writeFileSync(artifactPath, zip.toBuffer())
-      return {}
-    } catch (err) {
-      this.serverless.cli.log(`Error zipping artifact ${err}`)
-      return {
-        err: err,
-        status: 1,
-      }
-    }
+    return writeFile(artifactPath, zip.toBuffer(), (err) => {})
   }
 }
 
